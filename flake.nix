@@ -11,7 +11,7 @@
       perSystem = { config, self', pkgs, lib, system, ... }:
         let
          
-          runtimeDeps = [ ];
+          runtimeDeps = with pkgs; [ nodejs_24 corepack ];
           buildDeps = with pkgs; [ openssl pkg-config tailwindcss ];
           devDeps = with pkgs; [ 
             gdb 
