@@ -1,3 +1,36 @@
-fn main() {
-    println!("Hello, world!");
+use axum::{Router, routing::post};
+use sea_orm::{Database, DatabaseConnection};
+use std::env;
+use tower_cookies::CookieManagerLayer;
+
+mod login;
+
+#[derive(Clone)]
+struct AppState {
+    conn: DatabaseConnection,
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    dotenvy::dotenv().ok();
+    let db_url = env::var("DATABASE_URL").expect("DATABASE_URL is not set in .env file");
+    let host = env::var("HOST").expect("HOST is not set in .env file");
+    let port = env::var("PORT").expect("PORT is not set in .env file");
+    let server_url = format!("{host}:{port}");
+
+    let conn = Database::connect(db_url)
+        .await
+        .expect("Database connection failed");
+
+    let state = AppState { conn };
+
+    let app = Router::new()
+        .route("/login", post(login::login))
+        .layer(CookieManagerLayer::new())
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind(&server_url).await.unwrap();
+    axum::serve(listener, app).await?;
+
+    Ok(())
 }
