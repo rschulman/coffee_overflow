@@ -1,6 +1,7 @@
 use axum::{Json, extract::State, http::StatusCode};
 use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
+use serde_with::DeserializeFromStr;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fmt;
@@ -110,7 +111,7 @@ async fn link_user_to_states(
     Ok(())
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, DeserializeFromStr)]
 pub enum UsState {
     Alabama,
     Alaska,
