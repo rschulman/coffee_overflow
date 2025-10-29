@@ -1,8 +1,7 @@
 import axios from "axios";
-import type { LoginRequest, LoginResponse, UserResponse } from "./types";
+import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserResponse } from "./types";
 
-// TODO: What should this be?
-const BASE_URL = "https://localhost:8080";
+const BASE_URL = "http://localhost:8080";
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // if using a cookie
@@ -18,20 +17,24 @@ const urlString = (path: Endpoint): string => {
     return `${BASE_URL}/${path.valueOf()}`;
 }
 
-export const register = async (requestBody: RegisterRequest) => {
-    let res = await api.post<RegisterResponse>(Endpoint.register, requestBody);
-    return res.data;
+export const register = async (requestBody: RegisterRequest): Promise<RegisterResponse> => {
+    try {
+        let res = await api.post<RegisterResponse>(urlString(Endpoint.register), requestBody);
+        return res.data;
+    } catch (error) {
+        console.error('Registration error:', error);
+        throw error;
+    }
 };
 
-export const login = async (requestBody: LoginRequest) => {
+export const login = async (requestBody: LoginRequest): Promise<LoginResponse> => {
     try {
         let res = await api.post<LoginResponse>(urlString(Endpoint.login), requestBody);
+        return res.data;
     } catch (error) {
-        // TODO: update state with error message for user?
-        console.log(error);
+        console.error('Login error:', error);
+        throw error;
     }
-    // TODO: httpOnly cookie?
-    // sessionStorage.setItem('token', res.data.token);
 };
 
 export const getUser = async (): Promise<UserResponse> => {

@@ -1,5 +1,21 @@
 <script lang="ts">
 	import { STRINGS } from '$lib/constants/strings';
+	import { resetUser } from '$lib/stores/user';
+	import { goto } from '$app/navigation';
+	import { browser } from '$app/environment';
+
+	function handleLogout() {
+		// Clear user data from store
+		resetUser();
+
+		// Clear session token if it exists
+		if (browser) {
+			sessionStorage.removeItem('token');
+		}
+
+		// Navigate to login page
+		goto('/');
+	}
 </script>
 
 <header class="app-bar">
@@ -12,6 +28,10 @@
 				<span class="material-icons">dashboard</span>
 				<span class="nav-label">{STRINGS.nav.dashboard}</span>
 			</span>
+			<button class="nav-item logout-button" onclick={handleLogout} aria-label="Log out">
+				<span class="material-icons">logout</span>
+				<span class="nav-label">Log Out</span>
+			</button>
 		</nav>
 	</div>
 </header>
@@ -83,6 +103,15 @@
 	.nav-item.active {
 		background: linear-gradient(135deg, #eff6ff 0%, #f3e8ff 100%);
 		color: #3B82F6;
+	}
+
+	.logout-button {
+		font-family: inherit;
+	}
+
+	.logout-button:hover {
+		background: #fef2f2;
+		color: #dc2626;
 	}
 
 	@media (max-width: 768px) {

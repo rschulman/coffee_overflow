@@ -129,6 +129,38 @@
 				</StatCard>
 			</div>
 
+			<!-- License Status by State Section -->
+			<section class="license-status-section">
+				<h3 class="section-title">License Status by State</h3>
+				<Card style="padding: 0; overflow: hidden;">
+					<div class="state-list">
+						{#if userData.stateHours.length > 0}
+							{#each userData.stateHours as stateHour}
+								<div class="state-item">
+									<div class="state-icon-wrapper">
+										<span class="material-icons state-icon">location_on</span>
+									</div>
+									<div class="state-details">
+										<h4 class="state-title">{stateHour.state}</h4>
+										<p class="state-meta">
+											{stateHour.hoursCompleted} hours completed • Renewal: {formatDate(stateHour.renewalDate)}
+										</p>
+									</div>
+									<div class="state-status">
+										<span class="hours-badge">{stateHour.hoursCompleted} hrs</span>
+									</div>
+								</div>
+							{/each}
+						{:else}
+							<div class="empty-state">
+								<span class="material-icons empty-icon">info</span>
+								<p>No state licenses added yet</p>
+							</div>
+						{/if}
+					</div>
+				</Card>
+			</section>
+
 			<!-- AI Recommendations Section -->
 			<section class="recommendations-section">
 				<div class="section-header">
@@ -407,6 +439,94 @@
 	.status-badge.certified {
 		background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
 		color: #065f46;
+	}
+
+	/* License Status by State Section */
+	.license-status-section {
+		margin-bottom: 2rem;
+	}
+
+	.state-list {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.state-item {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+		padding: 1.25rem 1.5rem;
+		border-bottom: 1px solid #e5e7eb;
+	}
+
+	.state-item:last-child {
+		border-bottom: none;
+	}
+
+	.state-icon-wrapper {
+		width: 48px;
+		height: 48px;
+		border-radius: 12px;
+		background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+	}
+
+	.state-icon {
+		font-size: 1.5rem;
+		color: #f59e0b;
+	}
+
+	.state-details {
+		flex: 1;
+	}
+
+	.state-title {
+		font-size: 1rem;
+		font-weight: 600;
+		color: #1f2937;
+		margin: 0 0 0.25rem 0;
+	}
+
+	.state-meta {
+		font-size: 0.875rem;
+		color: #6b7280;
+		margin: 0;
+	}
+
+	.state-status {
+		flex-shrink: 0;
+	}
+
+	.hours-badge {
+		padding: 0.375rem 0.875rem;
+		border-radius: 16px;
+		font-size: 0.75rem;
+		font-weight: 600;
+		background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+		color: #1e40af;
+	}
+
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		padding: 3rem 1.5rem;
+		color: #9ca3af;
+	}
+
+	.empty-icon {
+		font-size: 3rem;
+		margin-bottom: 1rem;
+		opacity: 0.5;
+	}
+
+	.empty-state p {
+		margin: 0;
+		font-size: 0.875rem;
 	}
 
 	/* Mobile responsive styles */

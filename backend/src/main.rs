@@ -42,14 +42,19 @@ async fn main() -> anyhow::Result<()> {
             axum::http::header::AUTHORIZATION,
             axum::http::header::ACCEPT,
         ])
-        .allow_credentials(true);
+        .expose_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+        ])
+        .allow_credentials(true)
+        .max_age(std::time::Duration::from_secs(3600));
 
     let app = Router::new()
         .route("/login", post(login::login))
         .route("/register", post(register::register))
         .route("/user/details", get(user_details::user_details))
-        .layer(cors)
         .layer(CookieManagerLayer::new())
+        .layer(cors)
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(&server_url).await.unwrap();

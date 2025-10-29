@@ -8,6 +8,8 @@
 	import { STRINGS } from '$lib/constants/strings';
 	import GradientButton from '$lib/components/shared/GradientButton.svelte';
 	import FormSection from '$lib/components/onboarding/FormSection.svelte';
+	import { register, login } from '$lib/network/api';
+	import { browser } from '$app/environment';
 
 	// Generate state options from enum
 	const stateOptions = Object.entries(State).map(([key, value]) => ({
@@ -23,6 +25,8 @@
 	let currentHours = $state('');
 	let currentRenewalDate = $state('');
 	let inputKey = $state(0); // Key to force re-render of inputs
+	let loading = $state(false);
+	let error = $state('');
 
 	function addStateHours() {
 		if (currentState && currentHours && currentRenewalDate) {
@@ -51,14 +55,52 @@
 		stateHours = stateHours.filter((_, i) => i !== index);
 	}
 
-	function handleSubmit(e: Event) {
+	async function handleSubmit(e: Event) {
 		e.preventDefault();
-		updateUser({
-			username,
-			fullName,
-			stateHours
-		});
-		goto('/dashboard');
+		loading = true;
+		error = '';
+
+		try {
+			// Transform stateHours array into HashMap format that backend expects
+			const states: Record<string, { completed: number; due: string }> = {};
+			for (const sh of stateHours) {
+				states[sh.state] = {
+					completed: sh.hoursCompleted,
+					due: sh.renewalDate // Already in YYYY-MM-DD format
+				};
+			}
+
+			// Register the user
+			await register({
+				username,
+				password,
+				fullname: fullName, // Backend expects lowercase 'fullname'
+				states
+			});
+
+			// Automatically log the user in after registration
+			const loginResponse = await login({ username, password });
+
+			// Store token in sessionStorage
+			if (browser && loginResponse.token) {
+				sessionStorage.setItem('token', loginResponse.token);
+			}
+
+			// Update user store with user data
+			updateUser({
+				username,
+				fullName,
+				stateHours
+			});
+
+			// Navigate to dashboard
+			goto('/dashboard');
+		} catch (err) {
+			error = 'Registration failed. Please try again.';
+			console.error('Registration error:', err);
+		} finally {
+			loading = false;
+		}
 	}
 </script>
 
@@ -210,9 +252,17 @@
 					<p>{STRINGS.onboarding.infoText}</p>
 				</div>
 
+				{#if error}
+					<div class="error-message" role="alert">
+						{error}
+					</div>
+				{/if}
+
 				<div class="button-group">
-					<GradientButton type="submit" fullWidth={true} ariaLabel={STRINGS.aria.completeOnboarding}>
-						<span style="font-weight: 600; color: white;">{STRINGS.onboarding.startLearning}</span>
+					<GradientButton type="submit" fullWidth={true} disabled={loading} ariaLabel={STRINGS.aria.completeOnboarding}>
+						<span style="font-weight: 600; color: white;">
+							{loading ? 'Creating account...' : STRINGS.onboarding.startLearning}
+						</span>
 					</GradientButton>
 				</div>
 			</form>
@@ -496,6 +546,17 @@
 		color: #1e40af;
 		margin: 0;
 		line-height: 1.5;
+	}
+
+	.error-message {
+		background: #fef2f2;
+		border: 1px solid #fecaca;
+		border-left: 4px solid #dc2626;
+		color: #dc2626;
+		padding: 0.75rem 1rem;
+		border-radius: 4px;
+		margin-bottom: 1rem;
+		font-size: 0.875rem;
 	}
 
 	.button-group {

@@ -1,3 +1,15 @@
+export interface RegisterRequest {
+    username: string;
+    password: string;
+    fullname: string;  // Backend expects lowercase
+    states: Record<string, { completed: number; due: string }>;  // HashMap format
+}
+
+export interface RegisterResponse {
+    message: string;
+    user_id: number;
+}
+
 export interface LoginRequest {
     username: string;
     password: string;
