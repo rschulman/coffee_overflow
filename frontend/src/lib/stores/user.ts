@@ -20,11 +20,54 @@ const defaultUser: UserData = {
 	stateHours: []
 };
 
-let persistedUser = browser && localStorage.getItem('user')
-export let user = writable(persistedUser ? JSON.parse(persistedUser) : '')
+// Load user from localStorage with proper error handling
+function getInitialUser(): UserData {
+	if (!browser) return defaultUser;
 
+	try {
+		const stored = localStorage.getItem('user');
+
+		// Check for invalid/empty values
+		if (!stored || stored === '' || stored === 'undefined' || stored === 'null') {
+			return defaultUser;
+		}
+
+		// Try to parse
+		const parsed = JSON.parse(stored);
+
+		// Validate it's a proper UserData object with required fields
+		if (
+			typeof parsed === 'object' &&
+			parsed !== null &&
+			'username' in parsed &&
+			'fullName' in parsed &&
+			'stateHours' in parsed &&
+			Array.isArray(parsed.stateHours)
+		) {
+			return parsed as UserData;
+		}
+
+		// Data structure doesn't match, clear it
+		localStorage.removeItem('user');
+		return defaultUser;
+	} catch (e) {
+		// JSON parse failed, clear corrupted data silently
+		localStorage.removeItem('user');
+		return defaultUser;
+	}
+}
+
+export let user = writable<UserData>(getInitialUser());
+
+// Save user to localStorage whenever it changes
 if (browser) {
-    user.subscribe(u => localStorage.user = u)
+	user.subscribe(u => {
+		try {
+			localStorage.setItem('user', JSON.stringify(u));
+		} catch (e) {
+			console.error('Failed to save user data to localStorage:', e);
+		}
+	});
 }
 
 // Helper functions

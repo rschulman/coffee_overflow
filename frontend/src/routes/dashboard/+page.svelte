@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Card from '@smui/card';
-	import { userData } from '$lib/stores/user';
+	import { user } from '$lib/stores/user';
 	import { RECOMMENDED_COURSES, RECENT_COURSES } from '$lib/data/mockCourses';
 	import { STRINGS, formatString } from '$lib/constants/strings';
 	import type { Course } from '$lib/types';
@@ -11,35 +11,38 @@
 	import GradientButton from '$lib/components/shared/GradientButton.svelte';
 
 	// Get user data from store
-	const user = $derived($userData);
-	const userName = $derived(user.fullName.split(' ')[0] || 'User');
-	const profession = $derived(user.profession);
-	const state = $derived(user.state);
-	const hoursRequired = $derived(user.hoursRequired);
-	const hoursCompleted = $derived(user.hoursCompleted);
-	const renewalDate = $derived(user.renewalDate);
-	const selectedTopics = $derived(user.selectedTopics);
+	const userData = $derived($user);
+	const userName = $derived(userData.fullName.split(' ')[0] || 'User');
+
+	// Calculate totals from all states
+	const totalHoursCompleted = $derived(
+		userData.stateHours.reduce((sum, sh) => sum + sh.hoursCompleted, 0)
+	);
+
+	// Get primary state (first one added, or empty)
+	const primaryState = $derived(userData.stateHours[0]?.state || '');
+	const primaryRenewalDate = $derived(userData.stateHours[0]?.renewalDate || '');
+
+	// For demo purposes, use a fixed hours requirement
+	// In production, this would come from state requirements lookup
+	const totalHoursRequired = $derived(25);
 
 	const progressPercentage = $derived(
-		hoursRequired > 0 ? (hoursCompleted / hoursRequired) * 100 : 0
+		totalHoursRequired > 0 ? (totalHoursCompleted / totalHoursRequired) * 100 : 0
 	);
 	const daysUntilRenewal = $derived(
-		renewalDate ? Math.ceil((new Date(renewalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
+		primaryRenewalDate ? Math.ceil((new Date(primaryRenewalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
 	);
 
-	// Filter courses based on user's selected topics
-	const recommendedCourses = $derived(
-		selectedTopics.length > 0
-			? RECOMMENDED_COURSES.filter(course => selectedTopics.includes(course.topic))
-			: RECOMMENDED_COURSES
-	);
+	// Show all recommended courses (topic filtering removed from registration)
+	const recommendedCourses = $derived(RECOMMENDED_COURSES);
 
 	function formatDate(dateString: string) {
 		return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
 	function handleCertificationSubmit() {
-		alert(formatString(STRINGS.dashboard.certificationAlert, { state }));
+		alert(formatString(STRINGS.dashboard.certificationAlert, { state: primaryState }));
 	}
 
 	function handleEnrollClick(course: Course) {
@@ -57,7 +60,16 @@
 			<div class="welcome-section">
 				<div>
 					<h2 class="welcome-title">{formatString(STRINGS.dashboard.welcomeBack, { name: userName })}</h2>
-					<p class="welcome-subtitle">{profession} • {state}</p>
+					<p class="welcome-subtitle">
+						{#if primaryState}
+							Licensed in {primaryState}
+							{#if userData.stateHours.length > 1}
+								+ {userData.stateHours.length - 1} more {userData.stateHours.length === 2 ? 'state' : 'states'}
+							{/if}
+						{:else}
+							No state licenses added
+						{/if}
+					</p>
 				</div>
 				<GradientButton
 					onclick={handleCertificationSubmit}
@@ -83,7 +95,7 @@
 							<span class="material-icons">timeline</span>
 						</div>
 					</div>
-					<ProgressCircle {hoursCompleted} {hoursRequired} />
+					<ProgressCircle hoursCompleted={totalHoursCompleted} hoursRequired={totalHoursRequired} />
 				</Card>
 
 				<!-- Deadline Card -->
@@ -93,7 +105,7 @@
 					icon="event"
 					iconBgColor="linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)"
 				>
-					<p class="deadline-date">{renewalDate ? formatDate(renewalDate) : STRINGS.dashboard.notSet}</p>
+					<p class="deadline-date">{primaryRenewalDate ? formatDate(primaryRenewalDate) : STRINGS.dashboard.notSet}</p>
 					<p class="deadline-days">{formatString(STRINGS.dashboard.daysRemaining, { days: daysUntilRenewal })}</p>
 				</StatCard>
 
@@ -126,9 +138,7 @@
 							{STRINGS.dashboard.aiRecommendations}
 						</h3>
 						<p class="section-subtitle">
-							{selectedTopics.length > 0
-								? formatString(STRINGS.dashboard.personalizedCourses, { topics: selectedTopics.join(', ') })
-								: STRINGS.dashboard.personalizedCoursesDefault}
+							{STRINGS.dashboard.personalizedCoursesDefault}
 						</p>
 					</div>
 				</div>
