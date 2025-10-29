@@ -1,3 +1,20 @@
+// Import SMUI theme and components
+@use '@material/theme' with (
+  $primary: #3B82F6,
+  $secondary: #A855F7,
+  $background: #fafafa,
+  $surface: #ffffff
+);
+
+// Import SMUI component styles
+@use '@smui/button/index';
+@use '@smui/card/index';
+@use '@smui/textfield/index';
+@use '@smui/icon-button/index';
+@use '@smui/list/index';
+@use '@smui/paper/index';
+@use '@smui/top-app-bar/index';
+
 // Basic global styles for the app
 * {
   box-sizing: border-box;

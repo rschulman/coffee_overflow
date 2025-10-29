@@ -12,7 +12,7 @@
 		price: string;
 		rating: number;
 		aiReason: string;
-		onEnroll?: () => void;
+		onEnroll?: (e: Event) => void;
 	}
 
 	let { title, provider, topic, hours, format, price, rating, aiReason, onEnroll }: Props = $props();
@@ -54,7 +54,7 @@
 		variant="outlined"
 		style="width: 100%; margin-top: 1rem; min-height: 44px;"
 		aria-label={formatString(STRINGS.aria.enrollInCourse, { course: title })}
-		on:click={onEnroll}
+		onclick={onEnroll}
 	>
 		{STRINGS.dashboard.enrollNow}
 	</Button>

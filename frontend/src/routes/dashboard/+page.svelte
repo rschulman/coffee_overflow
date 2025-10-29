@@ -144,7 +144,10 @@
 							price={course.price}
 							rating={course.rating}
 							aiReason={course.aiReason}
-							onEnroll={() => handleEnrollClick(course)}
+							onEnroll={(e: Event) => {
+								e.preventDefault();
+								handleEnrollClick(course)
+							}}
 						/>
 					{/each}
 				</div>

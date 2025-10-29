@@ -3,65 +3,60 @@
 	import Textfield from '@smui/textfield';
 	import Button from '@smui/button';
 	import { goto } from '$app/navigation';
-	import { updateUser } from '$lib/stores/user';
-	import { CE_REQUIREMENTS, TOPIC_SUGGESTIONS } from '$lib/data/constants';
-	import { STRINGS, formatString } from '$lib/constants/strings';
+	import { updateUser, type StateHours } from '$lib/stores/user';
+	import { State } from '$lib/network/types';
+	import { STRINGS } from '$lib/constants/strings';
 	import GradientButton from '$lib/components/shared/GradientButton.svelte';
 	import FormSection from '$lib/components/onboarding/FormSection.svelte';
-	import TopicChip from '$lib/components/onboarding/TopicChip.svelte';
-	import ProgressPreview from '$lib/components/onboarding/ProgressPreview.svelte';
 
+	// Generate state options from enum
+	const stateOptions = Object.entries(State).map(([key, value]) => ({
+		code: key,
+		name: value
+	}));
+
+	let username = $state('');
+	let password = $state('');
 	let fullName = $state('');
-	let profession = $state('');
-	let licenseNumber = $state('');
-	let selectedState = $state('');
-	let renewalDate = $state('');
-	let hoursRequired = $state('');
-	let hoursCompleted = $state('');
-	let customTopic = $state('');
-	let selectedTopics = $state<string[]>([]);
-	let suggestedTopics = $state<string[]>([]);
+	let stateHours = $state<StateHours[]>([]);
+	let currentState = $state('');
+	let currentHours = $state('');
+	let currentRenewalDate = $state('');
+	let inputKey = $state(0); // Key to force re-render of inputs
 
-	// Update CE hours and suggested topics when profession or state changes
-	$effect(() => {
-		if (profession && selectedState) {
-			const professionReqs = CE_REQUIREMENTS[profession];
-			if (professionReqs) {
-				const hours = professionReqs[selectedState] || professionReqs['default'];
-				hoursRequired = hours.toString();
+	function addStateHours() {
+		if (currentState && currentHours && currentRenewalDate) {
+			// Check if state already exists
+			const existingIndex = stateHours.findIndex(sh => sh.state === currentState);
+			if (existingIndex >= 0) {
+				// Update existing state
+				stateHours[existingIndex] = { state: currentState, hoursCompleted: Number(currentHours), renewalDate: currentRenewalDate };
+				stateHours = [...stateHours];
+			} else {
+				// Add new state
+				stateHours = [...stateHours, { state: currentState, hoursCompleted: Number(currentHours), renewalDate: currentRenewalDate }];
 			}
-		}
-
-		if (profession && TOPIC_SUGGESTIONS[profession]) {
-			suggestedTopics = TOPIC_SUGGESTIONS[profession];
-		}
-	});
-
-	function toggleTopic(topic: string) {
-		if (selectedTopics.includes(topic)) {
-			selectedTopics = selectedTopics.filter(t => t !== topic);
-		} else {
-			selectedTopics = [...selectedTopics, topic];
+			currentState = '';
+			currentHours = '';
+			currentRenewalDate = '';
+			inputKey++; // Force re-render to reset label positions
 		}
 	}
 
-	function addCustomTopic() {
-		if (customTopic.trim() && !selectedTopics.includes(customTopic.trim())) {
-			selectedTopics = [...selectedTopics, customTopic.trim()];
-			customTopic = '';
-		}
+	function getStateName(stateCode: string): string {
+		return State[stateCode as keyof typeof State] || stateCode;
 	}
 
-	function handleSubmit() {
+	function removeStateHours(index: number) {
+		stateHours = stateHours.filter((_, i) => i !== index);
+	}
+
+	function handleSubmit(e: Event) {
+		e.preventDefault();
 		updateUser({
+			username,
 			fullName,
-			profession,
-			state: selectedState,
-			licenseNumber,
-			renewalDate,
-			hoursRequired: Number(hoursRequired),
-			hoursCompleted: Number(hoursCompleted),
-			selectedTopics
+			stateHours
 		});
 		goto('/dashboard');
 	}
@@ -81,10 +76,36 @@
 		</header>
 
 		<Card style="padding: 2.5rem; width: 100%; max-width: 700px;">
-			<form on:submit|preventDefault={handleSubmit} aria-label={STRINGS.aria.onboardingForm}>
+			<form onsubmit={handleSubmit} aria-label={STRINGS.aria.onboardingForm}>
 
 				<!-- Section 1: Basic Information -->
 				<FormSection stepNumber={1} title={STRINGS.onboarding.section1Title}>
+					<div class="form-row two-col">
+						<div class="form-field">
+							<Textfield
+								bind:value={username}
+								label="Email"
+								type="email"
+								style="width: 100%;"
+								variant="outlined"
+								required
+								input$aria-label="Your email address"
+							/>
+						</div>
+
+						<div class="form-field">
+							<Textfield
+								bind:value={password}
+								label="Password"
+								type="password"
+								style="width: 100%;"
+								variant="outlined"
+								required
+								input$aria-label="Your password"
+							/>
+						</div>
+					</div>
+
 					<div class="form-row">
 						<div class="form-field">
 							<Textfield
@@ -98,165 +119,88 @@
 							/>
 						</div>
 					</div>
-
-					<div class="form-row two-col">
-						<div class="form-field">
-							<label class="select-label" for="profession-select">{STRINGS.onboarding.profession} *</label>
-							<select
-								id="profession-select"
-								bind:value={profession}
-								required
-								class="custom-select"
-								aria-label={STRINGS.aria.selectYourProfession}
-							>
-								<option value="">{STRINGS.onboarding.selectProfession}</option>
-								<option value="Attorney">{STRINGS.professions.attorney}</option>
-								<option value="Engineer">{STRINGS.professions.engineer}</option>
-								<option value="CPA">{STRINGS.professions.cpa}</option>
-								<option value="Architect">{STRINGS.professions.architect}</option>
-							</select>
-						</div>
-
-						<div class="form-field">
-							<label class="select-label" for="state-select">{STRINGS.onboarding.state} *</label>
-							<select
-								id="state-select"
-								bind:value={selectedState}
-								required
-								class="custom-select"
-								aria-label={STRINGS.aria.selectYourState}
-							>
-								<option value="">{STRINGS.onboarding.selectState}</option>
-								<option value="CA">{STRINGS.states.ca}</option>
-								<option value="NY">{STRINGS.states.ny}</option>
-								<option value="TX">{STRINGS.states.tx}</option>
-								<option value="FL">{STRINGS.states.fl}</option>
-								<option value="IL">{STRINGS.states.il}</option>
-							</select>
-						</div>
-					</div>
-
-					<div class="form-row two-col">
-						<div class="form-field">
-							<Textfield
-								bind:value={licenseNumber}
-								label={STRINGS.onboarding.licenseNumber}
-								type="text"
-								style="width: 100%;"
-								variant="outlined"
-								required
-								input$aria-label={STRINGS.aria.yourLicenseNumber}
-							/>
-						</div>
-
-						<div class="form-field">
-							<Textfield
-								bind:value={renewalDate}
-								label={STRINGS.onboarding.renewalDate}
-								type="date"
-								style="width: 100%;"
-								variant="outlined"
-								required
-								input$aria-label={STRINGS.aria.licenseRenewalDate}
-							/>
-						</div>
-					</div>
 				</FormSection>
 
 				<div class="section-divider"></div>
 
-				<!-- Section 2: CE Hours -->
+				<!-- Section 2: Continuing Education Status -->
 				<FormSection stepNumber={2} title={STRINGS.onboarding.section2Title}>
-					{#if hoursRequired}
-						<div class="ai-badge">
-							<span class="material-icons">auto_awesome</span>
-							<span>{STRINGS.onboarding.aiAutoFilled}</span>
-						</div>
-					{/if}
+					<p class="section-description">Add each state where you are licensed with CE hours completed and renewal date:</p>
 
-					<div class="form-row two-col">
-						<div class="form-field">
-							<Textfield
-								bind:value={hoursRequired}
-								label={STRINGS.onboarding.hoursRequired}
-								type="number"
-								style="width: 100%;"
-								variant="outlined"
-								required
-								input$aria-label={STRINGS.aria.requiredCEHours}
-							/>
+					<div class="state-hours-input">
+						<div class="form-row three-col">
+							<div class="form-field select-wrapper">
+								<select
+									id="state-select"
+									bind:value={currentState}
+									class="custom-select"
+									aria-label={STRINGS.aria.selectYourState}
+								>
+									<option value="" disabled selected hidden>{STRINGS.onboarding.selectState}</option>
+									{#each stateOptions as state}
+										<option value={state.code}>{state.name}</option>
+									{/each}
+								</select>
+								<label for="state-select" class="floating-label">{STRINGS.onboarding.state}</label>
+							</div>
+
+							{#key inputKey}
+								<div class="form-field">
+									<Textfield
+										bind:value={currentHours}
+										label={STRINGS.onboarding.hoursCompleted}
+										type="number"
+										style="width: 100%;"
+										variant="outlined"
+										input$aria-label={STRINGS.aria.completedCEHours}
+									/>
+								</div>
+
+								<div class="form-field">
+									<Textfield
+										bind:value={currentRenewalDate}
+										label={STRINGS.onboarding.renewalDate}
+										type="date"
+										style="width: 100%;"
+										variant="outlined"
+										input$aria-label={STRINGS.aria.licenseRenewalDate}
+									/>
+								</div>
+							{/key}
 						</div>
 
-						<div class="form-field">
-							<Textfield
-								bind:value={hoursCompleted}
-								label={STRINGS.onboarding.hoursCompleted}
-								type="number"
-								style="width: 100%;"
-								variant="outlined"
-								required
-								input$aria-label={STRINGS.aria.completedCEHours}
-							/>
-						</div>
+						<Button
+							variant="outlined"
+							onclick={addStateHours}
+							disabled={!currentState || !currentHours || !currentRenewalDate}
+							style="min-height: 44px; margin-top: 0.5rem;"
+						>
+							<span style="font-weight: 600;">Add State</span>
+						</Button>
 					</div>
 
-					{#if hoursRequired && hoursCompleted}
-						<ProgressPreview
-							hoursCompleted={Number(hoursCompleted)}
-							hoursRequired={Number(hoursRequired)}
-						/>
-					{/if}
-				</FormSection>
-
-				<div class="section-divider"></div>
-
-				<!-- Section 3: Topic Interests -->
-				<FormSection stepNumber={3} title={STRINGS.onboarding.section3Title}>
-					{#if suggestedTopics.length > 0}
-						<div class="ai-badge">
-							<span class="material-icons">auto_awesome</span>
-							<span>{formatString(STRINGS.onboarding.aiRecommendations, { profession })}</span>
-						</div>
-
-						<p class="section-description">{STRINGS.onboarding.selectTopicsPrompt}</p>
-
-						<div class="topic-chips" role="group" aria-label={STRINGS.aria.topicSelection}>
-							{#each suggestedTopics as topic}
-								<TopicChip
-									{topic}
-									selected={selectedTopics.includes(topic)}
-									onToggle={toggleTopic}
-								/>
+					{#if stateHours.length > 0}
+						<div class="state-hours-list">
+							<h4 class="list-title">Your States & Hours:</h4>
+							{#each stateHours as stateHour, index}
+								<div class="state-hours-item">
+									<div class="state-hours-info">
+										<span class="state-name">{getStateName(stateHour.state)}</span>
+										<div class="state-details">
+											<span class="hours-value">{stateHour.hoursCompleted} hours completed</span>
+											<span class="renewal-value">Renews: {new Date(stateHour.renewalDate).toLocaleDateString()}</span>
+										</div>
+									</div>
+									<button
+										type="button"
+										class="remove-button"
+										onclick={() => removeStateHours(index)}
+										aria-label="Remove {getStateName(stateHour.state)}"
+									>
+										<span class="material-icons">close</span>
+									</button>
+								</div>
 							{/each}
-						</div>
-
-						<div class="custom-topic-section">
-							<p class="custom-topic-label">{STRINGS.onboarding.dontSeeTopics}</p>
-							<div class="custom-topic-input">
-								<Textfield
-									bind:value={customTopic}
-									label={STRINGS.onboarding.addCustomTopic}
-									type="text"
-									style="flex: 1;"
-									variant="outlined"
-									input$aria-label={STRINGS.aria.addCustomTopicField}
-									on:keydown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											addCustomTopic();
-										}
-									}}
-								/>
-								<Button
-									variant="outlined"
-									on:click={addCustomTopic}
-									disabled={!customTopic.trim()}
-									style="min-height: 56px; min-width: 100px; padding: 0 2rem;"
-									aria-label={STRINGS.aria.addCustomTopicField}
-								>
-									<span style="font-weight: 600;">{STRINGS.onboarding.add}</span>
-								</Button>
-							</div>
 						</div>
 					{/if}
 				</FormSection>
@@ -268,7 +212,7 @@
 
 				<div class="button-group">
 					<GradientButton type="submit" fullWidth={true} ariaLabel={STRINGS.aria.completeOnboarding}>
-						<span style="font-weight: 600;">{STRINGS.onboarding.startLearning}</span>
+						<span style="font-weight: 600; color: white;">{STRINGS.onboarding.startLearning}</span>
 					</GradientButton>
 				</div>
 			</form>
@@ -286,7 +230,6 @@
 	}
 
 	.top-nav {
-		padding: 1.5rem 2rem;
 		display: flex;
 		justify-content: flex-end;
 		width: 100%;
@@ -297,6 +240,7 @@
 		text-decoration: none;
 		font-size: 0.95rem;
 		padding: 0.75rem 1.5rem;
+		margin: 1rem;
 		border-radius: 8px;
 		background: rgba(255, 255, 255, 0.1);
 		backdrop-filter: blur(10px);
@@ -363,7 +307,100 @@
 	.section-description {
 		font-size: 0.9rem;
 		color: #6b7280;
-		margin-bottom: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.state-hours-input {
+		margin-bottom: 1.5rem;
+	}
+
+	.state-hours-list {
+		margin-top: 1.5rem;
+		padding: 1rem;
+		background: #f9fafb;
+		border-radius: 8px;
+	}
+
+	.list-title {
+		font-size: 0.95rem;
+		font-weight: 600;
+		color: #374151;
+		margin-bottom: 0.75rem;
+	}
+
+	.state-hours-item {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		padding: 0.75rem 1rem;
+		background: white;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		margin-bottom: 0.5rem;
+		transition: all 0.2s;
+	}
+
+	.state-hours-item:hover {
+		border-color: #d1d5db;
+		box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+	}
+
+	.state-hours-info {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		flex: 1;
+	}
+
+	.state-name {
+		font-weight: 600;
+		color: #1f2937;
+		font-size: 1rem;
+	}
+
+	.state-details {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.hours-value,
+	.renewal-value {
+		font-size: 0.875rem;
+		color: #6b7280;
+	}
+
+	.renewal-value {
+		font-style: italic;
+	}
+
+	.remove-button {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		border: none;
+		background: transparent;
+		color: #9ca3af;
+		cursor: pointer;
+		border-radius: 4px;
+		transition: all 0.2s;
+		padding: 0;
+	}
+
+	.remove-button:hover {
+		background: #fee2e2;
+		color: #dc2626;
+	}
+
+	.remove-button:focus {
+		outline: 2px solid #3B82F6;
+		outline-offset: 2px;
+	}
+
+	.remove-button .material-icons {
+		font-size: 1.25rem;
 	}
 
 	.form-row {
@@ -376,82 +413,67 @@
 		gap: 1rem;
 	}
 
+	.three-col {
+		display: grid;
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: 1rem;
+	}
+
 	.form-field {
 		position: relative;
 	}
 
-	.select-label {
-		display: block;
-		font-size: 0.875rem;
-		font-weight: 500;
-		color: #374151;
-		margin-bottom: 0.5rem;
+	.select-wrapper {
+		position: relative;
 	}
 
 	.custom-select {
 		width: 100%;
-		padding: 0.875rem 1rem;
+		padding: 1rem 0.875rem;
 		font-size: 1rem;
 		font-family: Inter, system-ui, sans-serif;
-		border: 1px solid #d1d5db;
+		border: 1px solid rgba(0, 0, 0, 0.38);
 		border-radius: 4px;
-		background: white;
+		background: transparent;
 		color: #1f2937;
 		cursor: pointer;
 		transition: all 0.2s;
+		appearance: none;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath fill='%23666' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+		background-repeat: no-repeat;
+		background-position: right 0.5rem center;
+		background-size: 1.5rem;
+		padding-right: 2.5rem;
+		min-height: 56px;
 	}
 
 	.custom-select:hover {
-		border-color: #9ca3af;
+		border-color: rgba(0, 0, 0, 0.87);
 	}
 
 	.custom-select:focus {
-		outline: 2px solid #3B82F6;
-		outline-offset: 2px;
+		outline: none;
 		border-color: #3B82F6;
+		border-width: 2px;
+		padding: calc(1rem - 1px) calc(0.875rem - 1px);
 	}
 
-	.ai-badge {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem 1rem;
-		background: linear-gradient(135deg, #eff6ff 0%, #f3e8ff 100%);
-		border: 1px solid #c7d2fe;
-		border-radius: 20px;
-		font-size: 0.875rem;
-		color: #4338ca;
-		font-weight: 500;
-		margin-bottom: 1rem;
+	.custom-select:focus + .floating-label {
+		color: #3B82F6;
 	}
 
-	.ai-badge .material-icons {
-		font-size: 1.125rem;
-		color: #7c3aed;
+	.floating-label {
+		position: absolute;
+		left: 0.875rem;
+		top: -0.5rem;
+		background: white;
+		padding: 0 0.25rem;
+		font-size: 0.75rem;
+		color: rgba(0, 0, 0, 0.6);
+		pointer-events: none;
+		transition: all 0.2s;
 	}
 
-	.topic-chips {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.75rem;
-		margin-bottom: 1.5rem;
-	}
-
-	.custom-topic-section {
-		margin-top: 1.5rem;
-	}
-
-	.custom-topic-label {
-		font-size: 0.875rem;
-		color: #6b7280;
-		margin-bottom: 0.75rem;
-	}
-
-	.custom-topic-input {
-		display: flex;
-		gap: 0.75rem;
-		align-items: center;
-	}
 
 	.info-box {
 		display: flex;
@@ -492,6 +514,14 @@
 		border-radius: 4px;
 	}
 
+	/* Tablet responsive styles */
+	@media (max-width: 1024px) {
+		.three-col {
+			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+	}
+
 	/* Mobile responsive styles */
 	@media (max-width: 768px) {
 		.onboarding-container {
@@ -506,7 +536,8 @@
 			font-size: 0.95rem;
 		}
 
-		.two-col {
+		.two-col,
+		.three-col {
 			grid-template-columns: 1fr;
 			gap: 1.5rem;
 		}
@@ -523,16 +554,16 @@
 			width: 100%;
 		}
 
-		.topic-chips {
-			gap: 0.5rem;
+		.state-hours-info {
+			flex: 1;
 		}
 
-		.custom-topic-input {
-			flex-direction: column;
+		.state-name {
+			font-size: 0.9rem;
 		}
 
-		.custom-topic-input :global(.mdc-button) {
-			width: 100%;
+		.hours-value {
+			font-size: 0.8rem;
 		}
 	}
 </style>

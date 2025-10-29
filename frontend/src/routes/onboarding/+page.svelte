@@ -74,7 +74,8 @@
 		}
 	}
 
-	function handleSubmit() {
+	function handleSubmit(e: Event) {
+		e.preventDefault();
 		// Save user data to store
 		updateUser({
 			fullName,
@@ -100,7 +101,7 @@
 		</header>
 
 		<Card style="padding: 2.5rem; width: 100%; max-width: 700px;">
-			<form on:submit|preventDefault={handleSubmit} aria-label="Onboarding form">
+			<form onsubmit={handleSubmit} aria-label="Onboarding form">
 
 				<!-- Section 1: Basic Information -->
 				<section class="form-section">

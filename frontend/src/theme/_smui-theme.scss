@@ -1,0 +1,30 @@
+@use 'sass:color';
+
+@use '@material/theme/color-palette';
+
+// EduTrack Pro Colors!
+@use '@material/theme/index' as theme with (
+  $primary: #3B82F6,
+  $secondary: #A855F7,
+  $surface: #ffffff,
+  $background: #fafafa,
+  $error: color-palette.$red-900
+);
+
+html,
+body {
+  background-color: theme.$surface;
+  color: theme.$on-surface;
+  margin: 0;
+  padding: 0;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: #40b3ff;
+}
+a:visited {
+  color: color.scale(#40b3ff, $lightness: -35%);
+}

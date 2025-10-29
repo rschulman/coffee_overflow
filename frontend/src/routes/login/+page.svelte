@@ -2,15 +2,15 @@
 	import Button from '@smui/button';
 	import Card from '@smui/card';
 	import Textfield from '@smui/textfield';
-	import { goto } from '$app/navigation';
 	import { STRINGS } from '$lib/constants/strings';
+	import { login } from '$lib/network/api';
 
-	let email = $state('');
+	let username = $state('');
 	let password = $state('');
 
-	function handleLogin() {
-		// Simple navigation to dashboard for demo purposes
-		goto('/dashboard');
+	function handleLogin(e: Event) {
+		e.preventDefault();
+		login({ username, password });
 	}
 </script>
 
@@ -24,10 +24,10 @@
 		<Card style="padding: 2rem; width: 100%; max-width: 400px;">
 			<h2 class="card-title">{STRINGS.login.welcomeBack}</h2>
 
-			<form on:submit|preventDefault={handleLogin} aria-label={STRINGS.aria.signInForm}>
+			<form onsubmit={handleLogin} aria-label={STRINGS.aria.signInForm}>
 				<div class="form-field">
 					<Textfield
-						bind:value={email}
+						bind:value={username}
 						label={STRINGS.login.email}
 						type="email"
 						style="width: 100%;"

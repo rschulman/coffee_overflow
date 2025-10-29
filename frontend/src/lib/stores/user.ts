@@ -1,36 +1,37 @@
 import { writable } from 'svelte/store';
+import { browser } from '$app/environment';
+
+export interface StateHours {
+	state: string;
+	hoursCompleted: number;
+	renewalDate: string;
+}
 
 export interface UserData {
+	username: string;
 	fullName: string;
-	profession: string;
-	state: string;
-	licenseNumber: string;
-	renewalDate: string;
-	hoursRequired: number;
-	hoursCompleted: number;
-	selectedTopics: string[];
+	stateHours: StateHours[];
 }
 
 // Initialize with default/empty values
 const defaultUser: UserData = {
+	username: '',
 	fullName: '',
-	profession: '',
-	state: '',
-	licenseNumber: '',
-	renewalDate: '',
-	hoursRequired: 0,
-	hoursCompleted: 0,
-	selectedTopics: []
+	stateHours: []
 };
 
-// Create the store
-export const userData = writable<UserData>(defaultUser);
+let persistedUser = browser && localStorage.getItem('user')
+export let user = writable(persistedUser ? JSON.parse(persistedUser) : '')
+
+if (browser) {
+    user.subscribe(u => localStorage.user = u)
+}
 
 // Helper functions
 export function updateUser(data: Partial<UserData>) {
-	userData.update(current => ({ ...current, ...data }));
+	user.update(current => ({ ...current, ...data }));
 }
 
 export function resetUser() {
-	userData.set(defaultUser);
+	user.set(defaultUser);
 }
