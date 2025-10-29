@@ -6,6 +6,7 @@ use tower_http::cors::CorsLayer;
 
 mod login;
 mod register;
+mod update;
 mod user_details;
 
 #[derive(Clone)]
@@ -53,6 +54,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/login", post(login::login))
         .route("/register", post(register::register))
         .route("/user/details", get(user_details::user_details))
+        .route("/user/hours", post(update::update_hours))
         .layer(CookieManagerLayer::new())
         .layer(cors)
         .with_state(state);
