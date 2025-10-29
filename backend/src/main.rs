@@ -1,7 +1,8 @@
-use axum::{Router, routing::{post, get}};
+use axum::{Router, routing::{post, get}, http::{Method, HeaderValue}};
 use sea_orm::{Database, DatabaseConnection};
 use std::env;
 use tower_cookies::CookieManagerLayer;
+use tower_http::cors::CorsLayer;
 
 mod login;
 mod register;
@@ -22,16 +23,32 @@ async fn main() -> anyhow::Result<()> {
     let port = env::var("PORT").expect("PORT is not set in .env file");
     let server_url = format!("{host}:{port}");
 
+    // Get allowed origin from env or use default for development
+    let frontend_origin = env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| "http://localhost:5173".to_string());
+
     let conn = Database::connect(db_url)
         .await
         .expect("Database connection failed");
 
     let state = AppState { conn };
 
+    // Configure CORS securely - only allow specific frontend origin
+    let cors = CorsLayer::new()
+        .allow_origin(frontend_origin.parse::<HeaderValue>().expect("Invalid FRONTEND_URL"))
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::ACCEPT,
+        ])
+        .allow_credentials(true);
+
     let app = Router::new()
         .route("/login", post(login::login))
         .route("/register", post(register::register))
         .route("/user/details", get(user_details::user_details))
+        .layer(cors)
         .layer(CookieManagerLayer::new())
         .with_state(state);
 
