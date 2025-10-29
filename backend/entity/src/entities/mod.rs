@@ -2,6 +2,7 @@
 
 pub mod prelude;
 
+pub mod session;
 pub mod state;
 pub mod user;
 pub mod user_state;

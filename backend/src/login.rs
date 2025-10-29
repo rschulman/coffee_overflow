@@ -40,6 +40,20 @@ pub async fn login(
         // Generate session token
         let session_token = Uuid::new_v4().to_string();
 
+        // Store session in database
+        use sea_orm::{ConnectionTrait, Statement};
+        let insert_session = format!(
+            "INSERT INTO session (token, user_id, created_at) VALUES ('{}', {}, datetime('now'))",
+            session_token, user.id
+        );
+        state.conn
+            .execute(Statement::from_string(
+                sea_orm::DatabaseBackend::Sqlite,
+                insert_session,
+            ))
+            .await
+            .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Session creation failed"))?;
+
         // Set session cookie
         let mut cookie = Cookie::new("session", session_token.clone());
         cookie.set_path("/");

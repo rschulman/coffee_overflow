@@ -1,10 +1,11 @@
-use axum::{Router, routing::post};
+use axum::{Router, routing::{post, get}};
 use sea_orm::{Database, DatabaseConnection};
 use std::env;
 use tower_cookies::CookieManagerLayer;
 
 mod login;
 mod register;
+mod user_details;
 
 #[derive(Clone)]
 struct AppState {
@@ -30,6 +31,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/login", post(login::login))
         .route("/register", post(register::register))
+        .route("/user/details", get(user_details::user_details))
         .layer(CookieManagerLayer::new())
         .with_state(state);
 
