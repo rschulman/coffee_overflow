@@ -14,6 +14,7 @@ impl MigrationTrait for Migration {
                     .col(pk_auto(User::Id))
                     .col(string(User::Username))
                     .col(string(User::Password))
+                    .col(string(User::Fullname))
                     .to_owned(),
             )
             .await
@@ -32,4 +33,5 @@ enum User {
     Id,
     Username,
     Password,
+    Fullname,
 }

@@ -16,15 +16,13 @@ pub struct LoginResponse {
     token: String,
 }
 
-const SALT: &str = "xfpgsctjdluhayufpdj8glbvhukrlstjbgdbljrl4p9fjlgdj476grj7hskul47gpj";
-
 pub async fn login(
     state: State<crate::AppState>,
     cookies: Cookies,
     Json(deets): Json<LoginCredentials>,
 ) -> Result<Json<LoginResponse>, (StatusCode, &'static str)> {
     // Salt and hash the submitted password
-    let salted = format!("{}{}", deets.password, SALT);
+    let salted = format!("{}{}", deets.password, crate::SALT);
     let mut hasher = Sha256::new();
     hasher.update(salted.as_bytes());
     let hashed_password = format!("{:x}", hasher.finalize());

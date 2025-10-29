@@ -4,11 +4,14 @@ use std::env;
 use tower_cookies::CookieManagerLayer;
 
 mod login;
+mod register;
 
 #[derive(Clone)]
 struct AppState {
     conn: DatabaseConnection,
 }
+
+pub const SALT: &str = "xfpgsctjdluhayufpdj8glbvhukrlstjbgdbljrl4p9fjlgdj476grj7hskul47gpj";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -26,6 +29,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .route("/login", post(login::login))
+        .route("/register", post(register::register))
         .layer(CookieManagerLayer::new())
         .with_state(state);
 
