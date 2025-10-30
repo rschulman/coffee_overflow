@@ -94,10 +94,10 @@ async fn link_user_to_states(
         if let Some(state_row) = state_result {
             let state_id: i32 = state_row.try_get("", "id")?;
 
-            // Insert into user_state table with hours_complete
+            // Insert into user_state table with hours_complete and renewal_date
             let insert_query = format!(
-                "INSERT INTO user_state (user_id, state_id, hours_complete) VALUES ({}, {}, {})",
-                user_id, state_id, state.1.completed
+                "INSERT INTO user_state (user_id, state_id, hours_complete, renewal_date) VALUES ({}, {}, {}, '{}')",
+                user_id, state_id, state.1.completed, state.1.due
             );
 
             conn.execute(Statement::from_string(

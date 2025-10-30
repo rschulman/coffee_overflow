@@ -10,6 +10,7 @@ pub struct Model {
     pub user_id: i32,
     pub state_id: i32,
     pub hours_complete: i32,
+    pub renewal_date: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

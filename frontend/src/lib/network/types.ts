@@ -20,10 +20,13 @@ export interface LoginResponse {
 }
 
 export interface UserDetailsResponse {
+    username: string;
+    fullname: string;
     states: Array<{
         state_code: string;
         hours_complete: number;
         legal_hours: number;
+        renewal_date: string | null;
     }>;
 }
 

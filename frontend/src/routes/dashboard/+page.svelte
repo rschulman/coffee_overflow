@@ -21,7 +21,19 @@
 
 	// Get primary state (first one added, or empty)
 	const primaryState = $derived(userData.stateHours[0]?.state || '');
-	const primaryRenewalDate = $derived(userData.stateHours[0]?.renewalDate || '');
+
+	// Find the earliest renewal date across all states (most urgent)
+	const nextRenewal = $derived.by(() => {
+		const validDates = userData.stateHours
+			.filter(sh => sh.renewalDate)
+			.map(sh => ({
+				state: sh.state,
+				date: sh.renewalDate
+			}))
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+		return validDates[0] || { state: '', date: '' };
+	});
 
 	// For demo purposes, use a fixed hours requirement
 	// In production, this would come from state requirements lookup
@@ -31,7 +43,7 @@
 		totalHoursRequired > 0 ? (totalHoursCompleted / totalHoursRequired) * 100 : 0
 	);
 	const daysUntilRenewal = $derived(
-		primaryRenewalDate ? Math.ceil((new Date(primaryRenewalDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
+		nextRenewal.date ? Math.ceil((new Date(nextRenewal.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
 	);
 
 	// Show all recommended courses (topic filtering removed from registration)
@@ -101,11 +113,11 @@
 				<!-- Deadline Card -->
 				<StatCard
 					title={STRINGS.dashboard.nextRenewal}
-					subtitle={STRINGS.dashboard.licenseExpiration}
+					subtitle={nextRenewal.state ? `${nextRenewal.state} License` : STRINGS.dashboard.licenseExpiration}
 					icon="event"
 					iconBgColor="linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)"
 				>
-					<p class="deadline-date">{primaryRenewalDate ? formatDate(primaryRenewalDate) : STRINGS.dashboard.notSet}</p>
+					<p class="deadline-date">{nextRenewal.date ? formatDate(nextRenewal.date) : STRINGS.dashboard.notSet}</p>
 					<p class="deadline-days">{formatString(STRINGS.dashboard.daysRemaining, { days: daysUntilRenewal })}</p>
 				</StatCard>
 
@@ -143,7 +155,10 @@
 									<div class="state-details">
 										<h4 class="state-title">{stateHour.state}</h4>
 										<p class="state-meta">
-											{stateHour.hoursCompleted} hours completed • Renewal: {formatDate(stateHour.renewalDate)}
+											{stateHour.hoursCompleted} hours completed
+											{#if stateHour.renewalDate}
+												• Renewal: {formatDate(stateHour.renewalDate)}
+											{/if}
 										</p>
 									</div>
 									<div class="state-status">

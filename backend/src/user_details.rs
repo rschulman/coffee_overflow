@@ -8,10 +8,13 @@ pub struct StateHours {
     state_code: String,
     hours_complete: u16,
     legal_hours: u16,
+    renewal_date: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct UserDetailsResponse {
+    username: String,
+    fullname: String,
     states: Vec<StateHours>,
 }
 
@@ -39,6 +42,7 @@ pub async fn user_details(
         name: String,
         legal_hours: u16,
         hours_complete: u16,
+        renewal_date: Option<String>,
     }
 
     let hours = entity::state::Entity::find()
@@ -46,6 +50,7 @@ pub async fn user_details(
         .filter(entity::user_state::Column::UserId.eq(resp.id))
         .select_only()
         .column(entity::user_state::Column::HoursComplete)
+        .column(entity::user_state::Column::RenewalDate)
         .column(entity::state::Column::LegalHours)
         .column(entity::state::Column::Name)
         .into_model::<QueryRes>()
@@ -59,10 +64,13 @@ pub async fn user_details(
             state_code: h.name.clone(),
             hours_complete: h.hours_complete,
             legal_hours: h.legal_hours,
+            renewal_date: h.renewal_date.clone(),
         })
         .collect();
 
     Ok(Json(UserDetailsResponse {
+        username: resp.username,
+        fullname: resp.fullname,
         states: states_response,
     }))
 }

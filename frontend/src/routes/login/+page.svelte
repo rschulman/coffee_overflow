@@ -26,21 +26,20 @@
 				sessionStorage.setItem('token', response.token);
 			}
 
-			// Fetch user details (only returns states from backend)
+			// Fetch user details from backend
 			const userDetails = await getUserDetails();
 
 			// Transform backend response to frontend StateHours format
 			const stateHours: StateHours[] = userDetails.states.map(state => ({
 				state: state.state_code,
 				hoursCompleted: state.hours_complete,
-				renewalDate: '' // Backend doesn't store renewal date yet, using empty string as placeholder
+				renewalDate: state.renewal_date || '' // Use renewal date from backend or empty string
 			}));
 
-			// Update user store - backend doesn't return username/fullName, so we only have what was entered
-			// Note: fullName won't be available on login, only username
+			// Update user store with complete data from backend
 			updateUser({
-				username,
-				fullName: '', // Backend doesn't provide this on login
+				username: userDetails.username,
+				fullName: userDetails.fullname,
 				stateHours
 			});
 
