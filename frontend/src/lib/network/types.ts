@@ -31,7 +31,12 @@ export interface UserDetailsResponse {
 }
 
 export interface UpdateHoursRequest {
-    hoursToUpdate: Map<State, HoursRequirements>
+    state_id: string;
+    hours: number;
+}
+
+export interface UpdateHoursResponse {
+    hours_complete: number;
 }
 
 export interface UserResponse {

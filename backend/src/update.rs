@@ -40,10 +40,18 @@ pub async fn update_hours(
         return Err((StatusCode::BAD_REQUEST, "Hours cannot be negative"));
     }
 
+    // Look up the state by its code to get the numeric ID
+    let state_record = entity::state::Entity::find()
+        .filter(entity::state::Column::Name.eq(&data.state_id))
+        .one(&state.conn)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?
+        .ok_or((StatusCode::NOT_FOUND, "State code not found"))?;
+
     // Find the user_state entry for this user and state
     let user_state_entry = entity::user_state::Entity::find()
         .filter(entity::user_state::Column::UserId.eq(user.id))
-        .filter(entity::user_state::Column::StateId.eq(data.state_id))
+        .filter(entity::user_state::Column::StateId.eq(state_record.id))
         .one(&state.conn)
         .await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, "Database error"))?

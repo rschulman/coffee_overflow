@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserDetailsResponse, UserResponse } from "./types";
+import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UpdateHoursRequest, UpdateHoursResponse, UserDetailsResponse, UserResponse } from "./types";
 
 const BASE_URL = "http://localhost:8080";
 const api = axios.create({
@@ -11,7 +11,8 @@ enum Endpoint {
     register = "register",
     login = "login",
     user = "user",
-    userDetails = "user/details"
+    userDetails = "user/details",
+    userHours = "user/hours"
 }
 
 const urlString = (path: Endpoint): string => {
@@ -44,6 +45,16 @@ export const getUserDetails = async (): Promise<UserDetailsResponse> => {
         return res.data;
     } catch (error) {
         console.error('Get user details error:', error);
+        throw error;
+    }
+};
+
+export const updateHours = async (requestBody: UpdateHoursRequest): Promise<UpdateHoursResponse> => {
+    try {
+        let res = await api.post<UpdateHoursResponse>(urlString(Endpoint.userHours), requestBody);
+        return res.data;
+    } catch (error) {
+        console.error('Update hours error:', error);
         throw error;
     }
 };

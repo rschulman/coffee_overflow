@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Card from '@smui/card';
-	import { user } from '$lib/stores/user';
+	import { user, updateUser } from '$lib/stores/user';
 	import { RECOMMENDED_COURSES, RECENT_COURSES } from '$lib/data/mockCourses';
 	import { STRINGS, formatString } from '$lib/constants/strings';
 	import type { Course } from '$lib/types';
@@ -9,6 +9,7 @@
 	import ProgressCircle from '$lib/components/dashboard/ProgressCircle.svelte';
 	import CourseCard from '$lib/components/dashboard/CourseCard.svelte';
 	import GradientButton from '$lib/components/shared/GradientButton.svelte';
+	import { updateHours, getUserDetails } from '$lib/network/api';
 
 	// Get user data from store
 	const userData = $derived($user);
@@ -60,6 +61,57 @@
 
 	function handleEnrollClick(course: Course) {
 		alert(formatString(STRINGS.dashboard.enrollmentAlert, { course: course.title }));
+	}
+
+	// State for editing hours
+	let editingStateCode = $state<string | null>(null);
+	let editHours = $state('');
+	let updating = $state(false);
+
+	function startEditing(stateCode: string, currentHours: number) {
+		editingStateCode = stateCode;
+		editHours = currentHours.toString();
+	}
+
+	function cancelEditing() {
+		editingStateCode = null;
+		editHours = '';
+	}
+
+	async function saveHours(stateCode: string) {
+		if (!editHours || updating) return;
+
+		updating = true;
+		try {
+			await updateHours({
+				state_id: stateCode,
+				hours: parseInt(editHours)
+			});
+
+			// Refresh user data from backend
+			const userDetails = await getUserDetails();
+			const stateHours = userDetails.states.map(state => ({
+				state: state.state_code,
+				hoursCompleted: state.hours_complete,
+				hoursRequired: state.legal_hours,
+				renewalDate: state.renewal_date || ''
+			}));
+
+			updateUser({
+				username: userDetails.username,
+				fullName: userDetails.fullname,
+				stateHours
+			});
+
+			// Close editing
+			editingStateCode = null;
+			editHours = '';
+		} catch (error) {
+			console.error('Failed to update hours:', error);
+			alert('Failed to update hours. Please try again.');
+		} finally {
+			updating = false;
+		}
 	}
 </script>
 
@@ -155,15 +207,55 @@
 									</div>
 									<div class="state-details">
 										<h4 class="state-title">{stateHour.state}</h4>
-										<p class="state-meta">
-											{stateHour.hoursCompleted} / {stateHour.hoursRequired} hours completed
-											{#if stateHour.renewalDate}
-												• Renewal: {formatDate(stateHour.renewalDate)}
-											{/if}
-										</p>
+										{#if editingStateCode === stateHour.state}
+											<div class="edit-hours-form">
+												<input
+													type="number"
+													bind:value={editHours}
+													min={stateHour.hoursCompleted}
+													max={stateHour.hoursRequired}
+													class="hours-input"
+													placeholder="Hours"
+												/>
+												<button
+													onclick={() => saveHours(stateHour.state)}
+													disabled={updating}
+													class="save-btn"
+													aria-label="Save hours"
+												>
+													<span class="material-icons">check</span>
+												</button>
+												<button
+													onclick={cancelEditing}
+													disabled={updating}
+													class="cancel-btn"
+													aria-label="Cancel"
+												>
+													<span class="material-icons">close</span>
+												</button>
+											</div>
+										{:else}
+											<p class="state-meta">
+												{stateHour.hoursCompleted} / {stateHour.hoursRequired} hours completed
+												{#if stateHour.renewalDate}
+													• Renewal: {formatDate(stateHour.renewalDate)}
+												{/if}
+											</p>
+										{/if}
 									</div>
 									<div class="state-status">
-										<span class="hours-badge">{stateHour.hoursCompleted}/{stateHour.hoursRequired}</span>
+										{#if editingStateCode === stateHour.state}
+											<span class="hours-badge editing">Editing...</span>
+										{:else}
+											<span class="hours-badge">{stateHour.hoursCompleted}/{stateHour.hoursRequired}</span>
+											<button
+												onclick={() => startEditing(stateHour.state, stateHour.hoursCompleted)}
+												class="edit-btn"
+												aria-label="Edit hours for {stateHour.state}"
+											>
+												<span class="material-icons">edit</span>
+											</button>
+										{/if}
 									</div>
 								</div>
 							{/each}
@@ -543,6 +635,95 @@
 	.empty-state p {
 		margin: 0;
 		font-size: 0.875rem;
+	}
+
+	/* Edit hours UI */
+	.edit-hours-form {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-top: 0.25rem;
+	}
+
+	.hours-input {
+		width: 80px;
+		padding: 0.375rem 0.5rem;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		font-size: 0.875rem;
+		font-family: inherit;
+	}
+
+	.hours-input:focus {
+		outline: 2px solid #3B82F6;
+		outline-offset: 0;
+		border-color: #3B82F6;
+	}
+
+	.edit-btn,
+	.save-btn,
+	.cancel-btn {
+		background: transparent;
+		border: none;
+		cursor: pointer;
+		padding: 0.25rem;
+		border-radius: 4px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.2s;
+	}
+
+	.edit-btn {
+		color: #6b7280;
+	}
+
+	.edit-btn:hover {
+		background: #f3f4f6;
+		color: #3B82F6;
+	}
+
+	.save-btn {
+		color: #10b981;
+	}
+
+	.save-btn:hover:not(:disabled) {
+		background: #d1fae5;
+	}
+
+	.save-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.cancel-btn {
+		color: #ef4444;
+	}
+
+	.cancel-btn:hover:not(:disabled) {
+		background: #fee2e2;
+	}
+
+	.cancel-btn:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.edit-btn .material-icons,
+	.save-btn .material-icons,
+	.cancel-btn .material-icons {
+		font-size: 1.125rem;
+	}
+
+	.state-status {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.hours-badge.editing {
+		background: #fef3c7;
+		color: #92400e;
 	}
 
 	/* Mobile responsive styles */
