@@ -1,7 +1,9 @@
 <script lang="ts">
 	import Card from '@smui/card';
+	import Textfield from '@smui/textfield';
+	import Button from '@smui/button';
 	import { user, updateUser } from '$lib/stores/user';
-	import { RECOMMENDED_COURSES, RECENT_COURSES } from '$lib/data/mockCourses';
+	import { getRecommendations } from '$lib/network/api';
 	import { STRINGS, formatString } from '$lib/constants/strings';
 	import type { Course } from '$lib/types';
 	import AppBar from '$lib/components/dashboard/AppBar.svelte';
@@ -48,19 +50,62 @@
 		nextRenewal.date ? Math.ceil((new Date(nextRenewal.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
 	);
 
-	// Show all recommended courses (topic filtering removed from registration)
-	const recommendedCourses = $derived(RECOMMENDED_COURSES);
+	// AI-powered course recommendations
+	let recommendedCourses = $state<Course[]>([]);
+	let loadingRecommendations = $state(false);
+	let userInterests = $state('');
+	let recommendationsError = $state('');
+
+	async function fetchRecommendations() {
+		if (!userInterests.trim()) {
+			recommendationsError = 'Please enter your interests';
+			return;
+		}
+
+		loadingRecommendations = true;
+		recommendationsError = '';
+
+		try {
+			const response = await getRecommendations(userInterests);
+			recommendedCourses = response.recommendations.map((rec, idx) => ({
+				id: idx + 1,
+				...rec,
+				aiReason: rec.ai_reason
+			}));
+		} catch (error) {
+			console.error('Failed to get recommendations:', error);
+			recommendationsError = 'Failed to get recommendations. Please try again.';
+		} finally {
+			loadingRecommendations = false;
+		}
+	}
 
 	function formatDate(dateString: string) {
 		return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 	}
 
-	function handleCertificationSubmit() {
-		alert(formatString(STRINGS.dashboard.certificationAlert, { state: primaryState }));
-	}
+	function exportToCSV() {
+		// Create CSV header
+		const header = 'State,Hours Completed,Hours Required,Renewal Date\n';
 
-	function handleEnrollClick(course: Course) {
-		alert(formatString(STRINGS.dashboard.enrollmentAlert, { course: course.title }));
+		// Create CSV rows
+		const rows = userData.stateHours.map(sh =>
+			`${sh.state},${sh.hoursCompleted},${sh.hoursRequired},${sh.renewalDate || 'Not set'}`
+		).join('\n');
+
+		// Combine header and rows
+		const csv = header + rows;
+
+		// Create blob and download
+		const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+		const link = document.createElement('a');
+		const url = URL.createObjectURL(blob);
+		link.setAttribute('href', url);
+		link.setAttribute('download', `ce-hours-status-${new Date().toISOString().split('T')[0]}.csv`);
+		link.style.visibility = 'hidden';
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
 	}
 
 	// State for editing hours
@@ -137,12 +182,12 @@
 					</p>
 				</div>
 				<GradientButton
-					onclick={handleCertificationSubmit}
-					ariaLabel={STRINGS.aria.submitCertToStateBar}
+					onclick={exportToCSV}
+					ariaLabel="Export status to CSV"
 				>
 					<div class="button-content">
-						<span class="material-icons button-icon">send</span>
-						<span>{STRINGS.dashboard.submitCertification}</span>
+						<span class="material-icons button-icon">download</span>
+						<span>Export CSV</span>
 					</div>
 				</GradientButton>
 			</div>
@@ -278,52 +323,61 @@
 							{STRINGS.dashboard.aiRecommendations}
 						</h3>
 						<p class="section-subtitle">
-							{STRINGS.dashboard.personalizedCoursesDefault}
+							Tell us what you're interested in learning
 						</p>
 					</div>
 				</div>
 
-				<div class="courses-grid">
-					{#each recommendedCourses as course}
-						<CourseCard
-							title={course.title}
-							provider={course.provider}
-							topic={course.topic}
-							hours={course.hours}
-							format={course.format}
-							price={course.price}
-							rating={course.rating}
-							aiReason={course.aiReason}
-							onEnroll={(e: Event) => {
-								e.preventDefault();
-								handleEnrollClick(course)
-							}}
+				<!-- Interests Input -->
+				<Card style="padding: 1.5rem; margin-bottom: 1.5rem;">
+					<div class="interests-form">
+						<Textfield
+							bind:value={userInterests}
+							label="What topics interest you?"
+							style="width: 100%;"
+							variant="outlined"
+							placeholder="e.g., contract law, legal ethics, technology..."
+							input$maxlength="200"
 						/>
-					{/each}
-				</div>
-			</section>
-
-			<!-- Recent Activity Section -->
-			<section class="activity-section">
-				<h3 class="section-title">{STRINGS.dashboard.recentActivity}</h3>
-				<Card style="padding: 0; overflow: hidden;">
-					<div class="activity-list">
-						{#each RECENT_COURSES as course}
-							<div class="activity-item">
-								<div class="activity-icon-wrapper">
-									<span class="material-icons activity-icon">school</span>
-								</div>
-								<div class="activity-details">
-									<h4 class="activity-title">{course.title}</h4>
-									<p class="activity-meta">{formatString(STRINGS.dashboard.completedOn, { date: formatDate(course.completedDate), hours: course.hours })}</p>
-								</div>
-								<div class="activity-status">
-									<span class="status-badge certified">{course.status}</span>
-								</div>
-							</div>
-						{/each}
+						<Button
+							variant="raised"
+							onclick={fetchRecommendations}
+							disabled={loadingRecommendations || !userInterests.trim()}
+							style="background: linear-gradient(135deg, #3B82F6 0%, #A855F7 100%); color: white; min-height: 44px;"
+						>
+							{#if loadingRecommendations}
+								<span>Getting Recommendations...</span>
+							{:else}
+								<span>Get AI Recommendations</span>
+							{/if}
+						</Button>
 					</div>
+					{#if recommendationsError}
+						<p class="error-message" role="alert" style="margin-top: 1rem; color: #dc2626;">{recommendationsError}</p>
+					{/if}
 				</Card>
+
+				<div class="courses-grid">
+					{#if loadingRecommendations}
+						<p style="color: #6b7280;">Loading recommendations...</p>
+					{:else if recommendedCourses.length === 0}
+						<p style="color: #6b7280;">Enter your interests above to get personalized course recommendations</p>
+					{:else}
+						{#each recommendedCourses as course}
+							<CourseCard
+								title={course.title}
+								provider={course.provider}
+								topic={course.topic}
+								hours={course.hours}
+								format={course.format}
+								price={course.price}
+								url={course.url}
+								rating={course.rating}
+								aiReason={course.aiReason}
+							/>
+						{/each}
+					{/if}
+				</div>
 			</section>
 		</section>
 	</div>
@@ -481,10 +535,34 @@
 		margin: 0;
 	}
 
+	.interests-form {
+		display: flex;
+		gap: 1rem;
+		align-items: flex-start;
+	}
+
+	.interests-form :global(.mdc-text-field) {
+		flex: 1;
+	}
+
 	.courses-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 		gap: 1.5rem;
+	}
+
+	@media (max-width: 768px) {
+		.interests-form {
+			flex-direction: column;
+		}
+
+		.interests-form :global(.mdc-text-field) {
+			width: 100%;
+		}
+
+		.interests-form :global(.mdc-button) {
+			width: 100%;
+		}
 	}
 
 	.activity-list {

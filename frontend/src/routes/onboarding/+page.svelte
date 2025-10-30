@@ -274,7 +274,7 @@
 									type="button"
 									class="topic-chip"
 									class:selected={selectedTopics.includes(topic)}
-									on:click={() => toggleTopic(topic)}
+									onclick={() => toggleTopic(topic)}
 									aria-pressed={selectedTopics.includes(topic)}
 									aria-label={`${topic} topic`}
 								>

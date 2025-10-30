@@ -6,7 +6,8 @@ export interface Course {
 	topic: string;
 	format: string;
 	price: string;
-	rating: number;
+	url: string;
+	rating?: number;
 	aiReason: string;
 }
 

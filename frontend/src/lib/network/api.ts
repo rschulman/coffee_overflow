@@ -12,7 +12,8 @@ enum Endpoint {
     login = "login",
     user = "user",
     userDetails = "user/details",
-    userHours = "user/hours"
+    userHours = "user/hours",
+    recommendations = "recommendations"
 }
 
 const urlString = (path: Endpoint): string => {
@@ -66,4 +67,33 @@ export const getUser = async (): Promise<UserResponse> => {
 
 export const updateUser = async (UserRequest): Promise<UserResponse> => {
     let res = await api.post<UserResponse>
+};
+
+export interface RecommendationsRequest {
+    interests: string;
+}
+
+export interface CourseRecommendation {
+    title: string;
+    provider: string;
+    hours: number;
+    topic: string;
+    format: string;
+    price: string;
+    url: string;
+    ai_reason: string;
+}
+
+export interface RecommendationsResponse {
+    recommendations: CourseRecommendation[];
+}
+
+export const getRecommendations = async (interests: string): Promise<RecommendationsResponse> => {
+    try {
+        let res = await api.post<RecommendationsResponse>(urlString(Endpoint.recommendations), { interests });
+        return res.data;
+    } catch (error) {
+        console.error('Get recommendations error:', error);
+        throw error;
+    }
 };

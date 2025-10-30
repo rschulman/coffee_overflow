@@ -10,21 +10,23 @@
 		hours: number;
 		format: string;
 		price: string;
-		rating: number;
+		url: string;
+		rating?: number;
 		aiReason: string;
-		onEnroll?: (e: Event) => void;
 	}
 
-	let { title, provider, topic, hours, format, price, rating, aiReason, onEnroll }: Props = $props();
+	let { title, provider, topic, hours, format, price, url, rating, aiReason }: Props = $props();
 </script>
 
 <Card class="course-card">
 	<div class="course-header">
 		<div class="course-topic-badge">{topic}</div>
-		<div class="course-rating">
-			<span class="material-icons rating-star">star</span>
-			<span>{rating}</span>
-		</div>
+		{#if rating}
+			<div class="course-rating">
+				<span class="material-icons rating-star">star</span>
+				<span>{rating}</span>
+			</div>
+		{/if}
 	</div>
 
 	<h4 class="course-title">{title}</h4>
@@ -50,14 +52,15 @@
 		</div>
 	</div>
 
-	<Button
-		variant="outlined"
-		style="width: 100%; margin-top: 1rem; min-height: 44px;"
-		aria-label={formatString(STRINGS.aria.enrollInCourse, { course: title })}
-		onclick={onEnroll}
-	>
-		{STRINGS.dashboard.enrollNow}
-	</Button>
+	<a href={url} target="_blank" rel="noopener noreferrer" style="text-decoration: none; width: 100%;">
+		<Button
+			variant="outlined"
+			style="width: 100%; margin-top: 1rem; min-height: 44px;"
+			aria-label={`Learn more about ${title}`}
+		>
+			Learn More
+		</Button>
+	</a>
 </Card>
 
 <style>
