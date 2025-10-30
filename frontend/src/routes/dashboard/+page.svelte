@@ -19,6 +19,11 @@
 		userData.stateHours.reduce((sum, sh) => sum + sh.hoursCompleted, 0)
 	);
 
+	// Sum up total hours required across all states
+	const totalHoursRequired = $derived(
+		userData.stateHours.reduce((sum, sh) => sum + sh.hoursRequired, 0)
+	);
+
 	// Get primary state (first one added, or empty)
 	const primaryState = $derived(userData.stateHours[0]?.state || '');
 
@@ -34,10 +39,6 @@
 
 		return validDates[0] || { state: '', date: '' };
 	});
-
-	// For demo purposes, use a fixed hours requirement
-	// In production, this would come from state requirements lookup
-	const totalHoursRequired = $derived(25);
 
 	const progressPercentage = $derived(
 		totalHoursRequired > 0 ? (totalHoursCompleted / totalHoursRequired) * 100 : 0
@@ -155,14 +156,14 @@
 									<div class="state-details">
 										<h4 class="state-title">{stateHour.state}</h4>
 										<p class="state-meta">
-											{stateHour.hoursCompleted} hours completed
+											{stateHour.hoursCompleted} / {stateHour.hoursRequired} hours completed
 											{#if stateHour.renewalDate}
 												• Renewal: {formatDate(stateHour.renewalDate)}
 											{/if}
 										</p>
 									</div>
 									<div class="state-status">
-										<span class="hours-badge">{stateHour.hoursCompleted} hrs</span>
+										<span class="hours-badge">{stateHour.hoursCompleted}/{stateHour.hoursRequired}</span>
 									</div>
 								</div>
 							{/each}

@@ -4,6 +4,7 @@ import { browser } from '$app/environment';
 export interface StateHours {
 	state: string;
 	hoursCompleted: number;
+	hoursRequired: number;
 	renewalDate: string;
 }
 

@@ -8,7 +8,7 @@
 	import { STRINGS } from '$lib/constants/strings';
 	import GradientButton from '$lib/components/shared/GradientButton.svelte';
 	import FormSection from '$lib/components/onboarding/FormSection.svelte';
-	import { register, login } from '$lib/network/api';
+	import { register, login, getUserDetails } from '$lib/network/api';
 	import { browser } from '$app/environment';
 
 	// Generate state options from enum
@@ -33,12 +33,22 @@
 			// Check if state already exists
 			const existingIndex = stateHours.findIndex(sh => sh.state === currentState);
 			if (existingIndex >= 0) {
-				// Update existing state
-				stateHours[existingIndex] = { state: currentState, hoursCompleted: Number(currentHours), renewalDate: currentRenewalDate };
+				// Update existing state (hoursRequired will be fetched from backend after registration)
+				stateHours[existingIndex] = {
+					state: currentState,
+					hoursCompleted: Number(currentHours),
+					hoursRequired: 0, // Temporary, will be fetched from backend
+					renewalDate: currentRenewalDate
+				};
 				stateHours = [...stateHours];
 			} else {
-				// Add new state
-				stateHours = [...stateHours, { state: currentState, hoursCompleted: Number(currentHours), renewalDate: currentRenewalDate }];
+				// Add new state (hoursRequired will be fetched from backend after registration)
+				stateHours = [...stateHours, {
+					state: currentState,
+					hoursCompleted: Number(currentHours),
+					hoursRequired: 0, // Temporary, will be fetched from backend
+					renewalDate: currentRenewalDate
+				}];
 			}
 			currentState = '';
 			currentHours = '';
@@ -86,11 +96,22 @@
 				sessionStorage.setItem('token', loginResponse.token);
 			}
 
-			// Update user store with user data
+			// Fetch complete user details including legal hours requirements
+			const userDetails = await getUserDetails();
+
+			// Transform backend response to include hoursRequired
+			const stateHoursWithRequirements: StateHours[] = userDetails.states.map(state => ({
+				state: state.state_code,
+				hoursCompleted: state.hours_complete,
+				hoursRequired: state.legal_hours,
+				renewalDate: state.renewal_date || ''
+			}));
+
+			// Update user store with complete data
 			updateUser({
-				username,
-				fullName,
-				stateHours
+				username: userDetails.username,
+				fullName: userDetails.fullname,
+				stateHours: stateHoursWithRequirements
 			});
 
 			// Navigate to dashboard

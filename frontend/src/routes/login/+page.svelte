@@ -33,6 +33,7 @@
 			const stateHours: StateHours[] = userDetails.states.map(state => ({
 				state: state.state_code,
 				hoursCompleted: state.hours_complete,
+				hoursRequired: state.legal_hours,
 				renewalDate: state.renewal_date || '' // Use renewal date from backend or empty string
 			}));
 
