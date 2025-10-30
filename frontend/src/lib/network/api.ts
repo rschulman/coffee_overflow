@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserResponse } from "./types";
+import type { LoginRequest, LoginResponse, RegisterRequest, RegisterResponse, UserDetailsResponse, UserResponse } from "./types";
 
 const BASE_URL = "http://localhost:8080";
 const api = axios.create({
@@ -10,7 +10,8 @@ const api = axios.create({
 enum Endpoint {
     register = "register",
     login = "login",
-    user = "user"
+    user = "user",
+    userDetails = "user/details"
 }
 
 const urlString = (path: Endpoint): string => {
@@ -33,6 +34,16 @@ export const login = async (requestBody: LoginRequest): Promise<LoginResponse> =
         return res.data;
     } catch (error) {
         console.error('Login error:', error);
+        throw error;
+    }
+};
+
+export const getUserDetails = async (): Promise<UserDetailsResponse> => {
+    try {
+        let res = await api.get<UserDetailsResponse>(urlString(Endpoint.userDetails));
+        return res.data;
+    } catch (error) {
+        console.error('Get user details error:', error);
         throw error;
     }
 };

@@ -3,8 +3,8 @@
 	import Card from '@smui/card';
 	import Textfield from '@smui/textfield';
 	import { STRINGS } from '$lib/constants/strings';
-	import { login } from '$lib/network/api';
-	import { updateUser } from '$lib/stores/user';
+	import { login, getUserDetails } from '$lib/network/api';
+	import { updateUser, type StateHours } from '$lib/stores/user';
 	import { goto } from '$app/navigation';
 	import { browser } from '$app/environment';
 
@@ -26,10 +26,23 @@
 				sessionStorage.setItem('token', response.token);
 			}
 
-			// Note: Backend doesn't return user data in login response
-			// User data should be fetched separately if needed, or stored from registration
-			// For now, we'll just store the username
-			updateUser({ username });
+			// Fetch user details (only returns states from backend)
+			const userDetails = await getUserDetails();
+
+			// Transform backend response to frontend StateHours format
+			const stateHours: StateHours[] = userDetails.states.map(state => ({
+				state: state.state_code,
+				hoursCompleted: state.hours_complete,
+				renewalDate: '' // Backend doesn't store renewal date yet, using empty string as placeholder
+			}));
+
+			// Update user store - backend doesn't return username/fullName, so we only have what was entered
+			// Note: fullName won't be available on login, only username
+			updateUser({
+				username,
+				fullName: '', // Backend doesn't provide this on login
+				stateHours
+			});
 
 			// Navigate to dashboard
 			goto('/dashboard');

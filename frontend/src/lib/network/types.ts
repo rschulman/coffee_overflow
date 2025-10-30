@@ -19,6 +19,14 @@ export interface LoginResponse {
     token: string;
 }
 
+export interface UserDetailsResponse {
+    states: Array<{
+        state_code: string;
+        hours_complete: number;
+        legal_hours: number;
+    }>;
+}
+
 export interface UpdateHoursRequest {
     hoursToUpdate: Map<State, HoursRequirements>
 }
